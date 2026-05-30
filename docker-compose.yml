@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: ssc0158_mqtt_broker
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  collector:
+    build:
+      context: ./src
+    container_name: ssc0158_collector
+    command: python collector.py
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./src:/app
+      - ./data:/app/data
+    environment:
+      - MQTT_HOST=mqtt-broker
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=sensors/telemetry
+      - DB_PATH=/app/data/measurements.db
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./src
+    container_name: ssc0158_api
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - mqtt-broker
+      - collector
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app
+      - ./data:/app/data
+    environment:
+      - DB_PATH=/app/data/measurements.db
+    restart: unless-stopped
+
+  sensor:
+    build:
+      context: ./src
+    container_name: ssc0158_sensor
+    command: python sensor_simulator.py
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./src:/app
+    environment:
+      - MQTT_HOST=mqtt-broker
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=sensors/telemetry
+      - SENSOR_ID=simulator-001
+    restart: unless-stopped

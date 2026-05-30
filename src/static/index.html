@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSC0158 Checkpoint 3</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7fb; color: #222; }
+    h1 { color: #1f4e79; }
+    .card { background: white; border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    th { background: #1f4e79; color: white; }
+    code { background: #edf2f7; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard de Coleta SSC0158</h1>
+  <div class="card">
+    <h2>Medida mais recente</h2>
+    <pre id="latest">Carregando...</pre>
+  </div>
+  <div class="card">
+    <h2>Histórico recente</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Timestamp</th><th>Temperatura</th><th>Humidade</th><th>Pressão</th></tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Resumo</h2>
+    <pre id="summary">Carregando...</pre>
+  </div>
+
+  <script>
+  async function fetchData() {
+    try {
+      const latestResponse = await fetch('/api/latest');
+      const latest = latestResponse.ok ? await latestResponse.json() : {error: 'Nenhum dado disponível ainda'};
+      document.getElementById('latest').innerText = latest.error ? latest.error : JSON.stringify(latest, null, 2);
+
+      const historyResponse = await fetch('/api/history?limit=10');
+      const historyData = await historyResponse.json();
+      const tbody = document.getElementById('history');
+      tbody.innerHTML = '';
+      if (historyData.data) {
+        historyData.data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${item.id}</td><td>${item.timestamp}</td><td>${item.temperature}</td><td>${item.humidity}</td><td>${item.pressure}</td>`;
+          tbody.appendChild(row);
+        });
+      }
+
+      const summaryResponse = await fetch('/api/summary');
+      const summary = await summaryResponse.json();
+      document.getElementById('summary').innerText = JSON.stringify(summary, null, 2);
+    } catch (error) {
+      document.getElementById('latest').innerText = 'Erro ao carregar dados: ' + error;
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+  </script>
+</body>
+</html>

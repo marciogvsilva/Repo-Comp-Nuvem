@@ -109,6 +109,7 @@ http://localhost:3000 (admin / admin)
 │
 ├── scripts/
 │   ├── populate_db.py          # Geração de dados (produtos artificiais)
+│   ├── load_test_python.py     # Teste de carga em Python (alternativa K6)
 │   └── run_experiment.sh       # Script de execução do experimento
 │
 ├── experiments/
@@ -158,11 +159,31 @@ CREATE TABLE produtos (
 # Com pytest
 ./.venv/bin/python -m pytest -v
 
-# Com K6 (load testing)
-k6 run experiments/load_test.js
+# Com K6 (load testing) - via Docker
+docker run -i grafana/k6 run - < experiments/load_test.js \
+  -e BASE_URL=http://host.docker.internal:8000
+
+# Com Python (alternativa ao K6, sem dependências externas)
+python scripts/load_test_python.py
 
 # Com cobertura
 ./.venv/bin/python -m pytest --cov=src tests/
+```
+
+### Resultado esperado do teste de carga
+
+```
+✅ Successful requests: 500
+❌ Failed requests: 0
+📊 Total requests: 500
+🎯 RPS (requests/sec): 300+
+
+⏳ Latency Stats (ms):
+  • Min: 1ms
+  • Max: 300ms
+  • Avg: 25-30ms
+  • P95: 150-200ms
+  • P99: 250-300ms
 ```
 
 ## Observabilidade

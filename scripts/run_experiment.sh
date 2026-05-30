@@ -1,41 +1,50 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$BASE_DIR"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RESULTS_DIR="$PROJECT_DIR/results"
+DB_PATH="/app/data/products.db"
+NUM_PRODUCTS=10000
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker não encontrado. Instale Docker para executar o experimento."
-  exit 1
+echo "=========================================="
+echo "SSC0158 - REST API Design Evaluation"
+echo "=========================================="
+
+# Create results directory
+mkdir -p "$RESULTS_DIR"
+
+# Start Docker containers
+echo -e "\n[1/4] Iniciando containers Docker..."
+cd "$PROJECT_DIR"
+docker compose down 2>/dev/null
+docker compose up -d --build
+
+# Wait for API to be ready
+echo -e "\n[2/4] Aguardando API ficar pronta..."
+for i in {1..30}; do
+    if curl -s http://localhost:8000/api/health > /dev/null 2>&1; then
+        echo "✅ API pronta"
+        break
+    fi
+    sleep 1
+done
+
+# Populate database
+echo -e "\n[3/4] Populando base de dados com $NUM_PRODUCTS produtos..."
+docker exec ssc0158_api python scripts/populate_db.py "$DB_PATH" "$NUM_PRODUCTS"
+
+# Run K6 load tests
+echo -e "\n[4/4] Executando testes de carga..."
+if command -v k6 &> /dev/null; then
+    k6 run -e BASE_URL=http://localhost:8000 \
+           --out json="$RESULTS_DIR/load_test_results.json" \
+           "$PROJECT_DIR/experiments/load_test.js"
+    echo "✅ Testes concluídos"
+else
+    echo "⚠️  K6 não instalado. Pulando testes de carga."
+    echo "    Instale com: npm install -g k6"
 fi
 
-echo "Iniciando experimento de checkpoint 3..."
-docker compose up --build -d
-
-echo "Aguardando 10 segundos para a coleta inicial de dados..."
-sleep 10
-
-API_URL="http://localhost:8000"
-
-echo "Executando requisições de verificação"
-curl -fsS "$API_URL/api/health" || true
-curl -fsS "$API_URL/api/latest" || true
-curl -fsS "$API_URL/api/history?limit=5" || true
-curl -fsS "$API_URL/api/summary" || true
-
-echo "Resultados preliminares salvos em results/" 
-cat <<'EOF' > results/README.md
-Este experimento de checkpoint 3 roda três serviços principais:
-- broker MQTT (Mosquitto)
-- sensor simulador de telemetria
-- coletor MQTT que persiste em SQLite
-- API web que exibe dados e histórico
-
-Para validar a coleta real, acesse:
-- http://localhost:8000
-- http://localhost:8000/api/latest
-- http://localhost:8000/api/history?limit=10
-- http://localhost:8000/api/summary
-EOF
-
-echo "Experimento iniciado. Confira o dashboard em http://localhost:8000"
+echo -e "\n=========================================="
+echo "Experimento concluído!"
+echo "Resultados salvos em: $RESULTS_DIR"
+echo "=========================================="

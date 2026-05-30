@@ -1,77 +1,178 @@
-# SSC0158 - Checkpoint 3
+# SSC0158 - REST API Design Evaluation
 
-Projeto de protótipo de streaming de dados com arquitetura containerizada e coleta em tempo real.
+Estudo empírico sobre o impacto de decisões de design em APIs RESTful, comparando estratégias de **paginação** (Offset vs Cursor) e **versionamento** (URI vs Headers HTTP).
 
 ## Objetivo
 
-Implementar o Checkpoint 3 com:
-- protótipo funcional executando coleta real de dados;
-- documentação do setup experimental;
-- resultados preliminares;
-- evidências de coleta real.
+Avaliar, através de testes controlados e métricas quantitativas, como diferentes decisões arquiteturais em APIs REST afetam:
+- **Desempenho**: latência, throughput, taxa de erro
+- **Consumo de recursos**: CPU e memória
+- **Evolutividade**: esforço para evoluir a API sem quebrar clientes
 
 ## Arquitetura
 
-Serviços:
-- `mqtt-broker`: broker MQTT para transporte de eventos de telemetria;
-- `sensor`: simulador de sensores que publica dados reais em tempo real;
-- `collector`: consumidor MQTT que persiste medições em banco SQLite;
-- `api`: API web que expõe dados coletados e interface de visualização.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Teste de Carga (K6)                          │
+│                  (HTTP Requests em paralelo)                    │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   FastAPI (Port 8000) │
+                    │   /v1/produtos       │
+                    │   /v2/produtos       │
+                    │   /produtos (headers)│
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │  SQLite Database      │
+                    │  (products.db)        │
+                    └──────────────────────┘
+
+    ┌──────────────────────────────────────────────────────┐
+    │        Observabilidade e Coleta de Métricas         │
+    ├──────────────────────────────────────────────────────┤
+    │ • Prometheus (9090): coleta de métricas              │
+    │ • Grafana (3000): visualização                       │
+    └──────────────────────────────────────────────────────┘
+```
+
+## Endpoints Implementados
+
+### Paginação com Offset (V1)
+```bash
+GET /v1/produtos?limit=50&offset=0
+```
+
+### Paginação com Cursor (V1)
+```bash
+GET /v1/produtos/cursor?limit=50&cursor=0
+```
+
+### Versionamento via URI (V2 com Offset)
+```bash
+GET /v2/produtos?limit=50&offset=0
+```
+
+### Versionamento via URI (V2 com Cursor)
+```bash
+GET /v2/produtos/cursor?limit=50&cursor=0
+```
+
+### Versionamento via Headers HTTP (Content Negotiation)
+```bash
+GET /produtos?limit=50&offset=0
+Accept: application/vnd.api.v1+json  # ou v2
+
+GET /produtos?limit=50&offset=0
+Accept: application/vnd.api.v2+json
+```
 
 ## Execução
 
-1. Acesse o diretório do projeto:
-   ```bash
-   cd ~/Documents/Disciplinas/Projeto\ de\ SI/SSC0158_checkpoint3
-   ```
-
-2. Inicie o sistema:
-   ```bash
-   docker compose up --build
-   ```
-
-3. Acesse a interface web:
-   - `http://localhost:8000`
-
-4. Verifique a API de dados:
-   - `http://localhost:8000/api/latest`
-   - `http://localhost:8000/api/history?limit=20`
-
-## Executando os testes
-
-Para rodar os testes de API localmente:
-
+### 1. Iniciar a aplicação com Docker Compose
 ```bash
-pip install --no-cache-dir -r src/requirements.txt
-pip install --no-cache-dir -r requirements-dev.txt
-pytest
+cd ~/Documents/Disciplinas/Projeto\ de\ SI/SSC0158_checkpoint3
+docker compose up --build
 ```
 
-Os testes ficam em `tests/test_api.py` e validam os endpoints principais de `api.py`.
+### 2. Popular a base de dados
+```bash
+python scripts/populate_db.py /app/data/products.db 10000
+```
 
-## Conteúdo do projeto
+### 3. Executar testes de carga com K6
+```bash
+k6 run -e BASE_URL=http://localhost:8000 experiments/load_test.js
+```
 
-- `docker-compose.yml`: orquestração dos serviços;
-- `src/Dockerfile`: imagem do serviço Python;
-- `src/api.py`: serviço HTTP e dashboard web;
-- `src/collector.py`: coleta MQTT e persistência em SQLite;
-- `src/sensor_simulator.py`: simulação de telemetria em tempo real;
-- `src/static/index.html`: dashboard de visualização básica;
-- `mosquitto/config/mosquitto.conf`: configuração de broker MQTT;
-- `scripts/run_experiment.sh`: script para rodar o experimento e coletar evidências.
-- `.gitignore`: lista de arquivos e pastas que não devem ser versionados, como `.venv/`, `data/`, caches e arquivos temporários.
+### 4. Acessar Grafana para visualizar métricas
+```
+http://localhost:3000 (admin / admin)
+```
 
-## Setup Experimental
+## Estrutura do Projeto
 
-A documentação do setup experimental está em `scripts/run_experiment.sh`.
-Ele inicia os serviços, aguarda coleta e salva os resultados preliminares em `results/`.
+```
+├── docker-compose.yml          # Orquestração (API, Prometheus, Grafana)
+├── README.md                   # Este arquivo
+├── .gitignore                  # Arquivos ignorados pelo Git
+│
+├── src/
+│   ├── Dockerfile              # Imagem Python
+│   ├── requirements.txt         # Dependências (fastapi, uvicorn)
+│   ├── api.py                  # API RESTful com 4 endpoints
+│   └── static/
+│       └── index.html          # Dashboard básico
+│
+├── scripts/
+│   ├── populate_db.py          # Geração de dados (produtos artificiais)
+│   └── run_experiment.sh       # Script de execução do experimento
+│
+├── experiments/
+│   └── load_test.js            # Configuração K6 para testes de carga
+│
+├── prometheus/
+│   └── prometheus.yml          # Configuração do Prometheus
+│
+├── data/
+│   ├── products.db             # Banco SQLite (gerado)
+│   ├── prometheus/             # Dados do Prometheus
+│   └── grafana/                # Dados do Grafana
+│
+└── results/
+    └── (resultados dos experimentos)
+```
 
-## Entrega Checkpoint 3
+## Variáveis de Ambiente
 
-Checklist atendido:
-- [x] Protótipo implementado em containers Docker;
-- [x] Setup experimental documentado;
-- [x] Coleta real de dados via MQTT e persistência em SQLite;
-- [x] Interface web simples para demonstrar informações em tempo real.
+- `DB_PATH`: Caminho do banco SQLite (padrão: `/app/data/products.db`)
+- `BASE_URL`: URL base para testes (padrão: `http://localhost:8000`)
 
-> Observação: o ambiente local deste agente não possui Docker instalado, portanto a execução precisa ser feita em uma máquina com Docker disponível.
+## Banco de Dados
+
+Tabela `produtos`:
+```sql
+CREATE TABLE produtos (
+    id INTEGER PRIMARY KEY,
+    nome TEXT,
+    categoria TEXT,
+    preco REAL,
+    estoque INTEGER,
+    criado_em TEXT,
+    atualizado_em TEXT
+)
+```
+
+## Hipóteses
+
+**H1 (Desempenho/Paginação)**: Cursor apresentará latência mais estável em consultas a páginas profundas.
+
+**H2 (Evolutividade/Versionamento)**: Headers HTTP reduzem acoplamento entre URI e versão, facilitando evolução.
+
+## Executando os Testes
+
+```bash
+# Com pytest
+./.venv/bin/python -m pytest -v
+
+# Com K6 (load testing)
+k6 run experiments/load_test.js
+
+# Com cobertura
+./.venv/bin/python -m pytest --cov=src tests/
+```
+
+## Observabilidade
+
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin / admin)
+
+## Referências
+
+- [RFC 7232: HTTP Conditional Requests](https://tools.ietf.org/html/rfc7232)
+- [REST API Design Handbook](https://restfulapi.net/)
+- [K6 Load Testing](https://k6.io/docs/)
+- [Prometheus Documentation](https://prometheus.io/docs/)

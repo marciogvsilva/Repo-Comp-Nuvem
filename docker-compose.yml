@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./src:/app
+      - ./scripts:/app/scripts:ro
       - ./data:/app/data
     environment:
       - DB_PATH=/app/data/products.db
@@ -26,6 +27,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
     restart: unless-stopped
+    depends_on:
+      - api
 
   grafana:
     image: grafana/grafana:latest

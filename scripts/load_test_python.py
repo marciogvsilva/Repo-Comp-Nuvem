@@ -2,14 +2,14 @@
 """Load testing script using Python (K6 alternative)"""
 
 import asyncio
+import os
 import time
 import statistics
 from typing import List
 import httpx
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 CONCURRENT_USERS = 50
-TEST_DURATION_SECONDS = 120
 REQUESTS_PER_USER = 10
 
 class LoadTestResults:
@@ -109,7 +109,7 @@ async def main():
     print("SSC0158 - REST API Load Test")
     print("=" * 60)
     print(f"\n🚀 Starting load test with {CONCURRENT_USERS} concurrent users")
-    print(f"📊 Duration: {TEST_DURATION_SECONDS}s")
+    print(f"📊 Planned requests: {CONCURRENT_USERS * REQUESTS_PER_USER}")
     print(f"📈 Requests per user: {REQUESTS_PER_USER}\n")
     
     results = LoadTestResults()

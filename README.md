@@ -23,6 +23,7 @@ Avaliar, através de testes controlados e métricas quantitativas, como diferent
                     │   /v1/produtos       │
                     │   /v2/produtos       │
                     │   /produtos (headers)│
+                    │   /metrics           │
                     └──────────┬───────────┘
                                │
                                ▼
@@ -75,12 +76,17 @@ Accept: application/vnd.api.v2+json
 ### 1. Iniciar a aplicação com Docker Compose
 ```bash
 cd ~/Documents/Disciplinas/Projeto\ de\ SI/SSC0158_checkpoint3
-docker compose up --build
+docker compose up -d --build
 ```
 
 ### 2. Popular a base de dados
 ```bash
-python scripts/populate_db.py /app/data/products.db 10000
+docker exec ssc0158_api python /app/scripts/populate_db.py /app/data/products.db 10000
+```
+
+Alternativa fora do Docker:
+```bash
+python scripts/populate_db.py data/products.db 10000
 ```
 
 ### 3. Executar testes de carga com K6
@@ -103,7 +109,7 @@ http://localhost:3000 (admin / admin)
 ├── src/
 │   ├── Dockerfile              # Imagem Python
 │   ├── requirements.txt         # Dependências (fastapi, uvicorn)
-│   ├── api.py                  # API RESTful com 4 endpoints
+│   ├── api.py                  # API RESTful, healthcheck e métricas
 │   └── static/
 │       └── index.html          # Dashboard básico
 │
@@ -163,7 +169,7 @@ CREATE TABLE produtos (
 docker run -i grafana/k6 run - < experiments/load_test.js \
   -e BASE_URL=http://host.docker.internal:8000
 
-# Com Python (alternativa ao K6, sem dependências externas)
+# Com Python (alternativa ao K6, sem instalar K6)
 python scripts/load_test_python.py
 
 # Com cobertura
@@ -187,6 +193,8 @@ python scripts/load_test_python.py
 ```
 
 ## Observabilidade
+
+A API expõe métricas Prometheus em `GET /metrics`, incluindo contadores por rota/status, histograma de latência e total atual de produtos.
 
 - **Prometheus**: http://localhost:9090
 - **Grafana**: http://localhost:3000 (admin / admin)

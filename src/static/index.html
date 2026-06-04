@@ -3,66 +3,401 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SSC0158 Checkpoint 3</title>
+  <title>SSC0158 - REST API Design Evaluation</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7fb; color: #222; }
-    h1 { color: #1f4e79; }
-    .card { background: white; border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-    th { background: #1f4e79; color: white; }
-    code { background: #edf2f7; padding: 2px 4px; border-radius: 4px; }
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --surface-strong: #172033;
+      --text: #1d2733;
+      --muted: #667085;
+      --line: #d9e0e8;
+      --blue: #1f5eff;
+      --green: #087f5b;
+      --orange: #b85c00;
+      --shadow: 0 12px 28px rgba(24, 39, 75, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: var(--surface-strong);
+      color: white;
+      padding: 24px clamp(16px, 4vw, 40px);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: 0;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: #c9d4e2;
+      max-width: 760px;
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto 40px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .toolbar, .summary, .table-wrap, .response-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 14px;
+      padding: 16px;
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    select, input, button {
+      min-height: 40px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      padding: 0 12px;
+      font: inherit;
+      background: white;
+      color: var(--text);
+    }
+
+    button {
+      cursor: pointer;
+      border-color: var(--blue);
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+    }
+
+    button.secondary {
+      background: white;
+      color: var(--blue);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      overflow: hidden;
+    }
+
+    .metric {
+      padding: 16px;
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .metric:last-child { border-right: 0; }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.15rem;
+      overflow-wrap: anywhere;
+    }
+
+    .ok { color: var(--green); }
+    .warn { color: var(--orange); }
+
+    .endpoint {
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef3f8;
+      color: #253143;
+      font-family: Consolas, Monaco, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #eef3f8;
+      color: #314055;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    tbody tr:hover { background: #f8fafc; }
+
+    .response-box {
+      padding: 16px;
+    }
+
+    .response-box h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #253143;
+    }
+
+    @media (max-width: 900px) {
+      .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
+    }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 20px, 1180px); }
+      .toolbar, .summary { grid-template-columns: 1fr; }
+      .metric { border-right: 0; border-bottom: 1px solid var(--line); }
+      .metric:last-child { border-bottom: 0; }
+    }
   </style>
 </head>
 <body>
-  <h1>Dashboard de Coleta SSC0158</h1>
-  <div class="card">
-    <h2>Medida mais recente</h2>
-    <pre id="latest">Carregando...</pre>
-  </div>
-  <div class="card">
-    <h2>Histórico recente</h2>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Timestamp</th><th>Temperatura</th><th>Humidade</th><th>Pressão</th></tr>
-      </thead>
-      <tbody id="history"></tbody>
-    </table>
-  </div>
-  <div class="card">
-    <h2>Resumo</h2>
-    <pre id="summary">Carregando...</pre>
-  </div>
+  <header>
+    <h1>SSC0158 - REST API Design Evaluation</h1>
+    <p>Dashboard operacional para consultar os endpoints de produtos, alternar estratégias de paginação e validar o versionamento por URI ou por header HTTP.</p>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="Controles de consulta">
+      <label>
+        Modo
+        <select id="mode">
+          <option value="uri">URI</option>
+          <option value="header">Header</option>
+        </select>
+      </label>
+      <label>
+        Versão
+        <select id="version">
+          <option value="v1">v1</option>
+          <option value="v2">v2</option>
+        </select>
+      </label>
+      <label>
+        Paginação
+        <select id="pagination">
+          <option value="offset">Offset</option>
+          <option value="cursor">Cursor</option>
+        </select>
+      </label>
+      <label>
+        Limit
+        <input id="limit" type="number" min="1" max="1000" value="10" />
+      </label>
+      <label id="position-label">
+        Offset
+        <input id="position" type="number" min="0" value="0" />
+      </label>
+      <button id="reload" type="button">Consultar</button>
+    </section>
+
+    <section class="summary" aria-label="Resumo da consulta">
+      <div class="metric"><span>Status</span><strong id="health" class="warn">Verificando</strong></div>
+      <div class="metric"><span>Versão</span><strong id="summary-version">-</strong></div>
+      <div class="metric"><span>Estratégia</span><strong id="summary-strategy">-</strong></div>
+      <div class="metric"><span>Total</span><strong id="summary-total">-</strong></div>
+    </section>
+
+    <div id="endpoint" class="endpoint">GET /v1/produtos?limit=10&amp;offset=0</div>
+
+    <section class="table-wrap" aria-label="Produtos">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th>Preço</th>
+            <th>Estoque</th>
+            <th>Criado em</th>
+          </tr>
+        </thead>
+        <tbody id="products">
+          <tr><td colspan="6">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="response-box" aria-label="Resposta bruta">
+      <h2>Resposta</h2>
+      <pre id="raw">{}</pre>
+    </section>
+  </main>
 
   <script>
-  async function fetchData() {
-    try {
-      const latestResponse = await fetch('/api/latest');
-      const latest = latestResponse.ok ? await latestResponse.json() : {error: 'Nenhum dado disponível ainda'};
-      document.getElementById('latest').innerText = latest.error ? latest.error : JSON.stringify(latest, null, 2);
+    const fields = {
+      mode: document.getElementById('mode'),
+      version: document.getElementById('version'),
+      pagination: document.getElementById('pagination'),
+      limit: document.getElementById('limit'),
+      position: document.getElementById('position'),
+      positionLabel: document.getElementById('position-label'),
+      reload: document.getElementById('reload'),
+      endpoint: document.getElementById('endpoint'),
+      health: document.getElementById('health'),
+      summaryVersion: document.getElementById('summary-version'),
+      summaryStrategy: document.getElementById('summary-strategy'),
+      summaryTotal: document.getElementById('summary-total'),
+      products: document.getElementById('products'),
+      raw: document.getElementById('raw'),
+    };
 
-      const historyResponse = await fetch('/api/history?limit=10');
-      const historyData = await historyResponse.json();
-      const tbody = document.getElementById('history');
-      tbody.innerHTML = '';
-      if (historyData.data) {
-        historyData.data.forEach(item => {
-          const row = document.createElement('tr');
-          row.innerHTML = `<td>${item.id}</td><td>${item.timestamp}</td><td>${item.temperature}</td><td>${item.humidity}</td><td>${item.pressure}</td>`;
-          tbody.appendChild(row);
-        });
+    function clampNumber(value, fallback, min, max) {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isNaN(parsed)) return fallback;
+      return Math.min(Math.max(parsed, min), max);
+    }
+
+    function currentRequest() {
+      const mode = fields.mode.value;
+      const version = fields.version.value;
+      const pagination = mode === 'header' ? 'offset' : fields.pagination.value;
+      const limit = clampNumber(fields.limit.value, 10, 1, 1000);
+      const position = clampNumber(fields.position.value, 0, 0, Number.MAX_SAFE_INTEGER);
+
+      fields.limit.value = limit;
+      fields.position.value = position;
+      fields.pagination.disabled = mode === 'header';
+      fields.positionLabel.firstChild.textContent = pagination === 'cursor' ? 'Cursor' : 'Offset';
+
+      if (mode === 'header') {
+        return {
+          label: `GET /produtos?limit=${limit}&offset=${position} | Accept: application/vnd.api.${version}+json`,
+          url: `/produtos?limit=${limit}&offset=${position}`,
+          options: { headers: { Accept: `application/vnd.api.${version}+json` } },
+        };
       }
 
-      const summaryResponse = await fetch('/api/summary');
-      const summary = await summaryResponse.json();
-      document.getElementById('summary').innerText = JSON.stringify(summary, null, 2);
-    } catch (error) {
-      document.getElementById('latest').innerText = 'Erro ao carregar dados: ' + error;
-    }
-  }
+      if (pagination === 'cursor') {
+        return {
+          label: `GET /${version}/produtos/cursor?limit=${limit}&cursor=${position}`,
+          url: `/${version}/produtos/cursor?limit=${limit}&cursor=${position}`,
+          options: {},
+        };
+      }
 
-  fetchData();
-  setInterval(fetchData, 5000);
+      return {
+        label: `GET /${version}/produtos?limit=${limit}&offset=${position}`,
+        url: `/${version}/produtos?limit=${limit}&offset=${position}`,
+        options: {},
+      };
+    }
+
+    function formatCurrency(value) {
+      return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function renderProducts(items) {
+      fields.products.innerHTML = '';
+      if (!items || items.length === 0) {
+        fields.products.innerHTML = '<tr><td colspan="6">Nenhum produto encontrado.</td></tr>';
+        return;
+      }
+
+      for (const item of items) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.id}</td>
+          <td>${item.nome}</td>
+          <td>${item.categoria}</td>
+          <td>${formatCurrency(item.preco)}</td>
+          <td>${item.estoque}</td>
+          <td>${item.criado_em}</td>
+        `;
+        fields.products.appendChild(row);
+      }
+    }
+
+    async function refreshHealth() {
+      try {
+        const response = await fetch('/api/health');
+        const payload = await response.json();
+        fields.health.textContent = payload.status === 'ok' ? 'OK' : 'Indisponível';
+        fields.health.className = payload.status === 'ok' ? 'ok' : 'warn';
+      } catch (error) {
+        fields.health.textContent = 'Indisponível';
+        fields.health.className = 'warn';
+      }
+    }
+
+    async function loadProducts() {
+      const request = currentRequest();
+      fields.endpoint.textContent = request.label;
+      fields.products.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+
+      try {
+        const response = await fetch(request.url, request.options);
+        const payload = await response.json();
+
+        fields.summaryVersion.textContent = payload.version || '-';
+        fields.summaryStrategy.textContent = payload.pagination?.strategy || '-';
+        fields.summaryTotal.textContent = payload.pagination?.total ?? '-';
+        fields.raw.textContent = JSON.stringify(payload, null, 2);
+        renderProducts(payload.data);
+      } catch (error) {
+        fields.products.innerHTML = '<tr><td colspan="6">Erro ao consultar a API.</td></tr>';
+        fields.raw.textContent = String(error);
+      }
+    }
+
+    for (const field of [fields.mode, fields.version, fields.pagination, fields.limit, fields.position]) {
+      field.addEventListener('change', loadProducts);
+    }
+
+    fields.reload.addEventListener('click', loadProducts);
+
+    refreshHealth();
+    loadProducts();
+    setInterval(refreshHealth, 5000);
   </script>
 </body>
 </html>

@@ -1,32 +1,36 @@
 import os
 import sqlite3
+import time
+from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
-from fastapi import FastAPI, Header
-from fastapi.responses import HTMLResponse
+from threading import Lock
+from typing import DefaultDict, Optional
+
+from fastapi import FastAPI, Header, Request
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from datetime import datetime, timezone
 
 BASE_DIR = Path(__file__).resolve().parent
-app = FastAPI(title="SSC0158 - REST API Design Evaluation")
+PROMETHEUS_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, float("inf"))
+REQUEST_TOTAL: DefaultDict[tuple[str, str, str], int] = defaultdict(int)
+REQUEST_DURATION_COUNT: DefaultDict[tuple[str, str, str], int] = defaultdict(int)
+REQUEST_DURATION_SUM: DefaultDict[tuple[str, str, str], float] = defaultdict(float)
+REQUEST_DURATION_BUCKETS: dict[tuple[str, str, str], list[int]] = {}
+METRICS_LOCK = Lock()
 
 
 def get_db_path() -> str:
     return os.getenv("DB_PATH", "/app/data/products.db")
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-@app.on_event("startup")
-def startup_event() -> None:
+def init_db() -> None:
     db_path = get_db_path()
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
@@ -47,6 +51,85 @@ def startup_event() -> None:
     conn.close()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="SSC0158 - REST API Design Evaluation", lifespan=lifespan)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def get_route_label(request: Request) -> str:
+    route = request.scope.get("route")
+    return getattr(route, "path", request.url.path)
+
+
+def format_label_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('\"', '\\"').replace("\n", "\\n")
+
+
+def prometheus_labels(method: str, path: str, status: str, extra: Optional[dict[str, str]] = None) -> str:
+    labels = {
+        "method": method,
+        "path": path,
+        "status": status,
+    }
+    if extra:
+        labels.update(extra)
+
+    return ",".join(f'{key}="{format_label_value(value)}"' for key, value in labels.items())
+
+
+def record_request_metric(method: str, path: str, status: int, duration: float) -> None:
+    key = (method, path, str(status))
+
+    with METRICS_LOCK:
+        REQUEST_TOTAL[key] += 1
+        REQUEST_DURATION_COUNT[key] += 1
+        REQUEST_DURATION_SUM[key] += duration
+
+        bucket_counts = REQUEST_DURATION_BUCKETS.setdefault(key, [0] * len(PROMETHEUS_BUCKETS))
+        for index, bucket in enumerate(PROMETHEUS_BUCKETS):
+            if duration <= bucket:
+                bucket_counts[index] += 1
+
+
+def get_products_total() -> int:
+    try:
+        conn = sqlite3.connect(get_db_path())
+        total = conn.execute("SELECT COUNT(*) FROM produtos").fetchone()[0]
+        conn.close()
+        return int(total)
+    except sqlite3.Error:
+        return 0
+
+
+@app.middleware("http")
+async def collect_metrics(request: Request, call_next):
+    start = time.perf_counter()
+    status_code = 500
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        if request.url.path != "/metrics":
+            duration = time.perf_counter() - start
+            record_request_metric(request.method, get_route_label(request), status_code, duration)
+
+
+
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
@@ -58,7 +141,55 @@ def homepage() -> str:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat() + "Z"}
+    return {"status": "ok", "timestamp": utc_timestamp()}
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    with METRICS_LOCK:
+        totals = dict(REQUEST_TOTAL)
+        duration_counts = dict(REQUEST_DURATION_COUNT)
+        duration_sums = dict(REQUEST_DURATION_SUM)
+        duration_buckets = {key: list(value) for key, value in REQUEST_DURATION_BUCKETS.items()}
+
+    lines = [
+        "# HELP ssc0158_api_info API metadata for the SSC0158 experiment.",
+        "# TYPE ssc0158_api_info gauge",
+        'ssc0158_api_info{app="rest_api_design_evaluation"} 1',
+        "# HELP ssc0158_products_total Current number of products in the database.",
+        "# TYPE ssc0158_products_total gauge",
+        f"ssc0158_products_total {get_products_total()}",
+        "# HELP http_requests_total Total HTTP requests processed by method, path and status.",
+        "# TYPE http_requests_total counter",
+    ]
+
+    for key in sorted(totals):
+        method, path, status = key
+        labels = prometheus_labels(method, path, status)
+        lines.append(f"http_requests_total{{{labels}}} {totals[key]}")
+
+    lines.extend(
+        [
+            "# HELP http_request_duration_seconds HTTP request duration in seconds.",
+            "# TYPE http_request_duration_seconds histogram",
+        ]
+    )
+
+    for key in sorted(duration_counts):
+        method, path, status = key
+        for bucket, count in zip(PROMETHEUS_BUCKETS, duration_buckets.get(key, [])):
+            bucket_label = "+Inf" if bucket == float("inf") else str(bucket)
+            labels = prometheus_labels(method, path, status, {"le": bucket_label})
+            lines.append(f"http_request_duration_seconds_bucket{{{labels}}} {count}")
+
+        labels = prometheus_labels(method, path, status)
+        lines.append(f"http_request_duration_seconds_count{{{labels}}} {duration_counts[key]}")
+        lines.append(f"http_request_duration_seconds_sum{{{labels}}} {duration_sums[key]:.6f}")
+
+    return Response(
+        content="\n".join(lines) + "\n",
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 # ========== V1: Paginação com OFFSET ==========
@@ -171,7 +302,7 @@ def list_products_offset_v2(limit: int = 50, offset: int = 0) -> dict:
             "total": total,
         },
         "data": [dict(row) for row in rows],
-        "meta": {"timestamp": datetime.utcnow().isoformat() + "Z"},
+        "meta": {"timestamp": utc_timestamp()},
     }
 
 
@@ -213,7 +344,7 @@ def list_products_cursor_v2(limit: int = 50, cursor: Optional[int] = None) -> di
             "total": total,
         },
         "data": [dict(row) for row in rows],
-        "meta": {"timestamp": datetime.utcnow().isoformat() + "Z"},
+        "meta": {"timestamp": utc_timestamp()},
     }
 
 
@@ -222,7 +353,7 @@ def list_products_cursor_v2(limit: int = 50, cursor: Optional[int] = None) -> di
 def list_products_headers(
     limit: int = 50,
     offset: int = 0,
-    accept: str = Header(None),
+    accept: Optional[str] = Header(None),
 ) -> dict:
     """Versionamento via Accept headers (Content Negotiation)"""
     version = "v1"
@@ -263,6 +394,6 @@ def list_products_headers(
     }
 
     if version == "v2":
-        result["meta"] = {"timestamp": datetime.utcnow().isoformat() + "Z"}
+        result["meta"] = {"timestamp": utc_timestamp()}
 
     return result

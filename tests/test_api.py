@@ -202,3 +202,20 @@ def test_content_negotiation_headers(tmp_path, monkeypatch):
         data = response.json()
         assert data["version"] == "v1"
         assert "meta" not in data
+
+
+def test_prometheus_metrics_endpoint(tmp_path, monkeypatch):
+    """Test Prometheus metrics endpoint"""
+    db_path = tmp_path / "products.db"
+    monkeypatch.setenv("DB_PATH", str(db_path))
+
+    with TestClient(app) as client:
+        client.get("/api/health")
+        response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "text/plain" in response.headers["content-type"]
+    body = response.text
+    assert "http_requests_total" in body
+    assert 'path="/api/health"' in body
+    assert "ssc0158_products_total" in body

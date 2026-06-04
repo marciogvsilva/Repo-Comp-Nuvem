@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """Script para popular a base de dados com produtos artificiais"""
 
+import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PATH = sys.argv[1] if len(sys.argv) > 1 else "/app/data/products.db"
 NUM_PRODUCTS = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
 
 categorias = ["Eletrônicos", "Livros", "Roupas", "Alimentos", "Móveis", "Esportes", "Beleza", "Brinquedos"]
+
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
@@ -29,7 +34,7 @@ cursor.execute(
 )
 
 # Insert products
-now = datetime.utcnow().isoformat() + "Z"
+now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 for i in range(1, NUM_PRODUCTS + 1):
     nome = f"Produto {i}"

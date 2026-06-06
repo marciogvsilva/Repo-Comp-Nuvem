@@ -116,6 +116,8 @@ http://localhost:3000 (admin / admin)
 ├── scripts/
 │   ├── populate_db.py          # Geração de dados (produtos artificiais)
 │   ├── load_test_python.py     # Teste de carga em Python (alternativa K6)
+│   ├── benchmark_api.py        # Benchmark controlado e agregação estatística
+│   ├── run_final_experiment.py # Execução final: banco, API, benchmark e recursos
 │   └── run_experiment.sh       # Script de execução do experimento
 │
 ├── experiments/
@@ -130,7 +132,7 @@ http://localhost:3000 (admin / admin)
 │   └── grafana/                # Dados do Grafana
 │
 └── results/
-    └── (resultados dos experimentos)
+    └── benchmark/              # Resultados finais usados no relatório
 ```
 
 ## Variáveis de Ambiente
@@ -172,25 +174,33 @@ docker run -i grafana/k6 run - < experiments/load_test.js \
 # Com Python (alternativa ao K6, sem instalar K6)
 python scripts/load_test_python.py
 
+# Experimento final usado no relatório
+./.venv/bin/python scripts/run_final_experiment.py \
+  --port 8010 --products 10000 --repetitions 5 \
+  --output-dir results/benchmark
+
+# Benchmark controlado contra uma API já em execução
+./.venv/bin/python scripts/benchmark_api.py \
+  --base-url http://127.0.0.1:8000 \
+  --output-dir results/benchmark \
+  --repetitions 5 --products 10000
+
 # Com cobertura
 ./.venv/bin/python -m pytest --cov=src tests/
 ```
 
-### Resultado esperado do teste de carga
+### Resultados experimentais medidos
 
-```
-✅ Successful requests: 500
-❌ Failed requests: 0
-📊 Total requests: 500
-🎯 RPS (requests/sec): 300+
+Os resultados atuais estão em `results/benchmark/`:
 
-⏳ Latency Stats (ms):
-  • Min: 1ms
-  • Max: 300ms
-  • Avg: 25-30ms
-  • P95: 150-200ms
-  • P99: 250-300ms
-```
+- `raw.json` e `raw.csv`: execuções individuais.
+- `summary.json` e `summary.csv`: estatísticas agregadas.
+- `table_pagination.tex` e `table_versioning.tex`: tabelas LaTeX usadas no relatório.
+- `resource_usage.json` e `resource_usage.csv`: amostras de CPU e memória da API.
+- `table_resources.tex`: tabela LaTeX de consumo de recursos.
+- `latency_chart.svg`: gráfico de latência média.
+
+Resumo da execução registrada: 15.600 requisições HTTP, 3 cenários de carga, 4 alvos, 5 repetições por combinação e 0% de erro. A paginação por cursor apresentou menor latência média em C1 e C3, menor p95 nos três cenários e resultado médio pior em C2; por isso, a hipótese H1 é apoiada de forma moderada, não absoluta. URI e headers tiveram desempenho semelhante para versionamento.
 
 ## Observabilidade
 

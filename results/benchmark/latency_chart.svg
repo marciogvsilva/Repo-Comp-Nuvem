@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="680" viewBox="0 0 1100 680">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="550" y="28" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700">Latência média por cenário e estratégia</text>
+<line x1="95" y1="45" x2="95" y2="550" stroke="#334155"/>
+<line x1="95" y1="550" x2="1065" y2="550" stroke="#334155"/>
+<line x1="90" y1="550.00" x2="1065" y2="550.00" stroke="#e2e8f0"/>
+<text x="85" y="554.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">0</text>
+<line x1="90" y1="449.00" x2="1065" y2="449.00" stroke="#e2e8f0"/>
+<text x="85" y="453.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">510</text>
+<line x1="90" y1="348.00" x2="1065" y2="348.00" stroke="#e2e8f0"/>
+<text x="85" y="352.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">1020</text>
+<line x1="90" y1="247.00" x2="1065" y2="247.00" stroke="#e2e8f0"/>
+<text x="85" y="251.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">1530</text>
+<line x1="90" y1="146.00" x2="1065" y2="146.00" stroke="#e2e8f0"/>
+<text x="85" y="150.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">2040</text>
+<line x1="90" y1="45.00" x2="1065" y2="45.00" stroke="#e2e8f0"/>
+<text x="85" y="49.00" text-anchor="end" font-family="Arial" font-size="12" fill="#475569">2550</text>
+<rect x="95.00" y="531.67" width="73.50" height="18.33" fill="#3b82f6" rx="3"/>
+<text x="131.75" y="525.67" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">93</text>
+<text transform="translate(131.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C1 Offset</text>
+<rect x="176.50" y="533.34" width="73.50" height="16.66" fill="#10b981" rx="3"/>
+<text x="213.25" y="527.34" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">84</text>
+<text transform="translate(213.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C1 Cursor</text>
+<rect x="258.00" y="532.28" width="73.50" height="17.72" fill="#f59e0b" rx="3"/>
+<text x="294.75" y="526.28" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">89</text>
+<text transform="translate(294.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C1 URI v2</text>
+<rect x="339.50" y="532.65" width="73.50" height="17.35" fill="#ef4444" rx="3"/>
+<text x="376.25" y="526.65" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">88</text>
+<text transform="translate(376.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C1 Header v2</text>
+<rect x="421.00" y="386.57" width="73.50" height="163.43" fill="#3b82f6" rx="3"/>
+<text x="457.75" y="380.57" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">825</text>
+<text transform="translate(457.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C2 Offset</text>
+<rect x="502.50" y="382.73" width="73.50" height="167.27" fill="#10b981" rx="3"/>
+<text x="539.25" y="376.73" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">845</text>
+<text transform="translate(539.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C2 Cursor</text>
+<rect x="584.00" y="382.29" width="73.50" height="167.71" fill="#f59e0b" rx="3"/>
+<text x="620.75" y="376.29" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">847</text>
+<text transform="translate(620.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C2 URI v2</text>
+<rect x="665.50" y="382.11" width="73.50" height="167.89" fill="#ef4444" rx="3"/>
+<text x="702.25" y="376.11" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">848</text>
+<text transform="translate(702.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C2 Header v2</text>
+<rect x="747.00" y="102.65" width="73.50" height="447.35" fill="#3b82f6" rx="3"/>
+<text x="783.75" y="96.65" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">2259</text>
+<text transform="translate(783.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C3 Offset</text>
+<rect x="828.50" y="106.11" width="73.50" height="443.89" fill="#10b981" rx="3"/>
+<text x="865.25" y="100.11" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">2241</text>
+<text transform="translate(865.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C3 Cursor</text>
+<rect x="910.00" y="103.92" width="73.50" height="446.08" fill="#f59e0b" rx="3"/>
+<text x="946.75" y="97.92" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">2252</text>
+<text transform="translate(946.75,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C3 URI v2</text>
+<rect x="991.50" y="99.11" width="73.50" height="450.89" fill="#ef4444" rx="3"/>
+<text x="1028.25" y="93.11" text-anchor="middle" font-family="Arial" font-size="11" fill="#0f172a">2277</text>
+<text transform="translate(1028.25,568) rotate(55)" text-anchor="start" font-family="Arial" font-size="12" fill="#334155">C3 Header v2</text>
+<text x="24" y="297.50" transform="rotate(-90 24 297.50)" text-anchor="middle" font-family="Arial" font-size="14" fill="#334155">Latência média (ms)</text>
+</svg>

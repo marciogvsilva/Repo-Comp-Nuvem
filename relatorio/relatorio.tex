@@ -324,8 +324,10 @@ k6 run -e BASE_URL=http://localhost:8000 experiments/load_test.js
 A reprodução do experimento final usado neste relatório pode ser feita em um comando:
 
 \begin{verbatim}
-./.venv/bin/python scripts/run_final_experiment.py \
-  --port 8010 --products 10000 --repetitions 5 \
+./.venv/bin/python \
+  scripts/run_final_experiment.py \
+  --port 8010 --products 10000 \
+  --repetitions 5 \
   --output-dir results/benchmark
 \end{verbatim}
 
@@ -550,8 +552,10 @@ Os critérios de inclusão priorizaram estudos empíricos ou metodológicos rela
 Os principais artefatos para reprodução são: \texttt{docker-compose.yml}, \texttt{src/Dockerfile}, \texttt{src/requirements.txt}, \texttt{requirements-dev.txt}, \texttt{scripts/populate\_db.py}, \texttt{scripts/benchmark\_api.py}, \texttt{scripts/run\_final\_experiment.py}, \texttt{experiments/load\_test.js}, \texttt{prometheus/prometheus.yml} e o diretório \texttt{results/benchmark/}. O comando recomendado para reproduzir a rodada final é:
 
 \begin{verbatim}
-./.venv/bin/python scripts/run_final_experiment.py \
-  --port 8010 --products 10000 --repetitions 5 \
+  ./.venv/bin/python \
+  scripts/run_final_experiment.py \
+  --port 8010 --products 10000 \
+  --repetitions 5 \
   --output-dir results/benchmark
 \end{verbatim}
 

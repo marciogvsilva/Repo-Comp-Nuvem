@@ -19,7 +19,7 @@ Avaliar, através de testes controlados e métricas quantitativas, como diferent
                                │
                                ▼
                     ┌──────────────────────┐
-                    │   FastAPI (Port 8000) │
+                    │   FastAPI (Port 8000)│
                     │   /v1/produtos       │
                     │   /v2/produtos       │
                     │   /produtos (headers)│
@@ -28,12 +28,12 @@ Avaliar, através de testes controlados e métricas quantitativas, como diferent
                                │
                                ▼
                     ┌──────────────────────┐
-                    │  SQLite Database      │
-                    │  (products.db)        │
+                    │  SQLite Database     │
+                    │  (products.db)       │
                     └──────────────────────┘
 
     ┌──────────────────────────────────────────────────────┐
-    │        Observabilidade e Coleta de Métricas         │
+    │        Observabilidade e Coleta de Métricas          │
     ├──────────────────────────────────────────────────────┤
     │ • Prometheus (9090): coleta de métricas              │
     │ • Grafana (3000): visualização                       │

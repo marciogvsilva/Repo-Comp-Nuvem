@@ -99,6 +99,135 @@ k6 run -e BASE_URL=http://localhost:8000 experiments/load_test.js
 http://localhost:3000 (admin / admin)
 ```
 
+
+## Execução via SSH na VM da Disciplina
+
+Na VM do LaSDPC/ICMC-USP, o diretório `$HOME` é montado via NFS e pode ter problemas de permissão com arquivos criados por containers. Por isso, recomenda-se copiar o projeto para `/tmp` e executar o Docker a partir de lá.
+
+### 1. Acessar a VM e preparar uma cópia limpa
+
+```bash
+ssh gcloudgrad04@andromeda.lasdpc.icmc.usp.br -p 23134
+
+cd ~
+git clone https://github.com/marciogvsilva/Repo-Comp-Nuvem.git
+
+sudo docker rm -f ssc0158_api ssc0158_prometheus ssc0158_grafana 2>/dev/null || true
+sudo rm -rf /tmp/gcloudgrad04/projeto-ssc0158
+mkdir -p /tmp/gcloudgrad04/projeto-ssc0158
+
+rsync -av \
+  --exclude .git \
+  --exclude .venv \
+  --exclude data \
+  --exclude __pycache__ \
+  --exclude .pytest_cache \
+  ~/Repo-Comp-Nuvem/ /tmp/gcloudgrad04/projeto-ssc0158/
+
+cd /tmp/gcloudgrad04/projeto-ssc0158
+```
+
+Se `rsync` não estiver disponível, use `cp`, mas evite copiar por cima de uma execução antiga:
+
+```bash
+sudo rm -rf /tmp/gcloudgrad04/projeto-ssc0158
+mkdir -p /tmp/gcloudgrad04/projeto-ssc0158
+cp -r ~/Repo-Comp-Nuvem/. /tmp/gcloudgrad04/projeto-ssc0158/
+cd /tmp/gcloudgrad04/projeto-ssc0158
+```
+
+### 2. Subir API, Prometheus e Grafana
+
+```bash
+sudo docker compose up -d --build
+sudo docker exec ssc0158_api python /app/scripts/populate_db.py /app/data/products.db 10000
+```
+
+Se Prometheus ou Grafana ficarem reiniciando por erro de permissão, corrija os diretórios montados e suba novamente:
+
+```bash
+sudo docker compose stop prometheus grafana
+sudo rm -rf data/prometheus data/grafana
+sudo mkdir -p data/prometheus data/grafana
+sudo chown -R 65534:65534 data/prometheus
+sudo chown -R 472:472 data/grafana
+sudo docker compose up -d prometheus grafana
+```
+
+### 3. Verificar os serviços
+
+```bash
+sudo docker ps
+curl http://localhost:8000/api/health
+curl http://localhost:8000/metrics | head
+curl http://localhost:9090/-/ready
+curl http://localhost:3000/api/health
+```
+
+Para testar os endpoints principais:
+
+```bash
+curl "http://localhost:8000/v1/produtos?limit=2&offset=0" | python3 -m json.tool
+curl "http://localhost:8000/v1/produtos/cursor?limit=2&cursor=0" | python3 -m json.tool
+curl "http://localhost:8000/v2/produtos?limit=2&offset=0" | python3 -m json.tool
+curl -H "Accept: application/vnd.api.v2+json" \
+  "http://localhost:8000/produtos?limit=2&offset=0" | python3 -m json.tool
+```
+
+### 4. Acessar pelo navegador local com túnel SSH
+
+Em outro terminal da sua máquina local, rode:
+
+```bash
+ssh -L 8000:localhost:8000 -L 9090:localhost:9090 -L 3000:localhost:3000 \
+  gcloudgrad04@andromeda.lasdpc.icmc.usp.br -p 23134
+```
+
+Depois acesse:
+
+- Dashboard da API: http://localhost:8000/
+- Prometheus: http://localhost:9090/
+- Grafana: http://localhost:3000/ (`admin` / `admin`)
+
+### 5. Rodar testes e gerar resultados finais na VM
+
+Caso a VM ainda não tenha suporte a ambiente virtual Python, instale:
+
+```bash
+sudo apt update
+sudo apt install -y python3.12-venv
+```
+
+Crie a venv e instale as dependências:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/pip install -r src/requirements.txt -r requirements-dev.txt
+```
+
+Rode os testes apontando explicitamente para `tests`, para evitar que o `pytest` tente varrer `data/grafana`, que pertence ao container:
+
+```bash
+./.venv/bin/python -m pytest -q tests
+```
+
+Gere os resultados finais:
+
+```bash
+./.venv/bin/python scripts/run_final_experiment.py \
+  --port 8010 --products 10000 --repetitions 5 \
+  --output-dir results/benchmark
+```
+
+Confira os arquivos gerados:
+
+```bash
+cat results/benchmark/summary.md
+ls -lh results/benchmark
+```
+
 ## Estrutura do Projeto
 
 ```
